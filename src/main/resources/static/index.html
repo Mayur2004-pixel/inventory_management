@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartStock — Enterprise Inventory Management System</title>
+    <meta name="description" content="Production-grade inventory management system built with Java Spring Boot and Oracle PL/SQL.">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Custom Design System -->
+    <link href="/css/styles.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="app-container">
+
+    <!-- ======================================================================
+         1. SIDEBAR NAVIGATION
+         ====================================================================== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">
+                <i class="bi bi-box-seam"></i>
+            </div>
+            <div>
+                <div class="brand-text">SmartStock</div>
+                <div class="brand-sub">Oracle PL/SQL System</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Overview</div>
+            <a href="#dashboard" class="nav-item-link active" data-view="dashboard">
+                <i class="bi bi-speedometer2"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <div class="nav-section-title">Inventory Control</div>
+            <a href="#products" class="nav-item-link" data-view="products">
+                <i class="bi bi-boxes"></i>
+                <span>Products Catalog</span>
+            </a>
+            <a href="#stock-in" class="nav-item-link" data-view="stock-in">
+                <i class="bi bi-box-arrow-in-down"></i>
+                <span>Stock In (Receiving)</span>
+            </a>
+            <a href="#stock-out" class="nav-item-link" data-view="stock-out">
+                <i class="bi bi-box-arrow-up-right"></i>
+                <span>Stock Out (Issue / Sales)</span>
+            </a>
+            <a href="#movements" class="nav-item-link" data-view="movements">
+                <i class="bi bi-clock-history"></i>
+                <span>Transaction History</span>
+            </a>
+            <a href="#low-stock" class="nav-item-link" data-view="low-stock">
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>Low-Stock Alerts</span>
+            </a>
+
+            <div class="nav-section-title">Supply Chain</div>
+            <a href="#suppliers" class="nav-item-link" data-view="suppliers">
+                <i class="bi bi-truck"></i>
+                <span>Suppliers Directory</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="small text-white-50">Database Engine</span>
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Oracle 26ai</span>
+            </div>
+            <div class="font-mono text-muted" style="font-size: 0.68rem;">db.freesql.com:1521</div>
+        </div>
+    </aside>
+
+    <!-- ======================================================================
+         2. MAIN WRAPPER & TOPBAR
+         ====================================================================== -->
+    <div class="main-wrapper">
+        <header class="topbar">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-sm btn-outline-secondary d-lg-none" id="sidebarToggle">
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+                <h1 class="topbar-title" id="topbarPageTitle">Enterprise Inventory Dashboard</h1>
+            </div>
+
+            <div class="topbar-actions">
+                <div class="db-status-pill">
+                    <span class="db-indicator-dot"></span>
+                    <span>Oracle PL/SQL Active</span>
+                </div>
+                <button class="btn btn-sm btn-primary-navy d-none d-md-inline-flex align-items-center gap-1" onclick="openAddProductModal()">
+                    <i class="bi bi-plus-circle"></i> Add Product
+                </button>
+                <button class="btn btn-sm btn-accent d-none d-md-inline-flex align-items-center gap-1" onclick="navigateTo('stock-in')">
+                    <i class="bi bi-box-arrow-in-down"></i> Receive Stock
+                </button>
+            </div>
+        </header>
+
+        <!-- ==================================================================
+             3. CONTENT PANES
+             ================================================================== -->
+        <main class="content-body">
+
+            <!-- --------------------------------------------------------------
+                 VIEW 1: DASHBOARD
+                 -------------------------------------------------------------- -->
+            <section class="view-pane active" id="view-dashboard">
+                <!-- KPI Statistics Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-xl-2 col-md-4 col-sm-6">
+                        <div class="stat-card primary">
+                            <div class="stat-header">
+                                <span class="stat-title">Total Products</span>
+                                <div class="stat-icon primary"><i class="bi bi-boxes"></i></div>
+                            </div>
+                            <div class="stat-value" id="statTotalProducts">--</div>
+                            <div class="stat-footer">Registered catalog items</div>
+                        </div>
+                    </div>
+                    <div class="col-xl-2 col-md-4 col-sm-6">
+                        <div class="stat-card cyan">
+                            <div class="stat-header">
+                                <span class="stat-title">Stock Units</span>
+                                <div class="stat-icon cyan"><i class="bi bi-layers"></i></div>
+                            </div>
+                            <div class="stat-value" id="statTotalStockUnits">--</div>
+                            <div class="stat-footer">Total items on hand</div>
+                        </div>
+                    </div>
+                    <div class="col-xl-2 col-md-4 col-sm-6">
+                        <div class="stat-card warning">
+                            <div class="stat-header">
+                                <span class="stat-title">Low Stock</span>
+                                <div class="stat-icon warning"><i class="bi bi-exclamation-triangle"></i></div>
+                            </div>
+                            <div class="stat-value" id="statLowStockCount">--</div>
+                            <div class="stat-footer">Under reorder threshold</div>
+                        </div>
+                    </div>
+                    <div class="col-xl-2 col-md-4 col-sm-6">
+                        <div class="stat-card danger">
+                            <div class="stat-header">
+                                <span class="stat-title">Out of Stock</span>
+                                <div class="stat-icon danger"><i class="bi bi-slash-circle"></i></div>
+                            </div>
+                            <div class="stat-value" id="statOutOfStockCount">--</div>
+                            <div class="stat-footer">Zero balance items</div>
+                        </div>
+                    </div>
+                    <div class="col-xl-2 col-md-4 col-sm-6">
+                        <div class="stat-card navy">
+                            <div class="stat-header">
+                                <span class="stat-title">Suppliers</span>
+                                <div class="stat-icon navy"><i class="bi bi-truck"></i></div>
+                            </div>
+                            <div class="stat-value" id="statTotalSuppliers">--</div>
+                            <div class="stat-footer">Active vendors</div>
+                        </div>
+                    </div>
+                    <div class="col-xl-2 col-md-4 col-sm-6">
+                        <div class="stat-card success">
+                            <div class="stat-header">
+                                <span class="stat-title">Inventory Value</span>
+                                <div class="stat-icon success"><i class="bi bi-currency-dollar"></i></div>
+                            </div>
+                            <div class="stat-value" id="statInventoryValue">--</div>
+                            <div class="stat-footer">At procurement cost</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row g-3 mb-4">
+                    <div class="col-lg-7">
+                        <div class="panel-card h-100">
+                            <div class="panel-header">
+                                <h3 class="panel-title"><i class="bi bi-pie-chart text-primary"></i> Category Stock Distribution</h3>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="openAddCategoryModal()">
+                                    <i class="bi bi-plus-lg"></i> Add Category
+                                </button>
+                            </div>
+                            <div class="panel-body">
+                                <div style="height: 280px; position: relative;">
+                                    <canvas id="chartCategoryStock"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-5">
+                        <div class="panel-card h-100">
+                            <div class="panel-header">
+                                <h3 class="panel-title"><i class="bi bi-bar-chart text-primary"></i> Movement Operations Ratio</h3>
+                                <span class="badge bg-light text-secondary border">Audited Movements</span>
+                            </div>
+                            <div class="panel-body">
+                                <div style="height: 280px; position: relative;">
+                                    <canvas id="chartMovementTrend"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Movements & Critical Alerts Row -->
+                <div class="row g-3">
+                    <div class="col-lg-8">
+                        <div class="panel-card mb-0">
+                            <div class="panel-header">
+                                <h3 class="panel-title"><i class="bi bi-clock-history text-primary"></i> Recent Inventory Movements</h3>
+                                <a href="#movements" class="btn btn-sm btn-outline-primary" onclick="navigateTo('movements')">
+                                    View All History <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-custom">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Product</th>
+                                            <th>Type</th>
+                                            <th>Change</th>
+                                            <th>Reference</th>
+                                            <th>Timestamp</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dashboardRecentMovementsTableBody">
+                                        <tr><td colspan="6" class="text-center py-3 text-muted">Loading live movements...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="panel-card mb-0">
+                            <div class="panel-header">
+                                <h3 class="panel-title text-warning"><i class="bi bi-exclamation-triangle-fill"></i> Replenishment Alerts</h3>
+                                <a href="#low-stock" class="btn btn-sm btn-outline-warning" onclick="navigateTo('low-stock')">
+                                    Full Report
+                                </a>
+                            </div>
+                            <div class="panel-body">
+                                <div id="dashboardLowStockList">
+                                    <div class="text-center py-3 text-muted small">Loading low stock data...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- --------------------------------------------------------------
+                 VIEW 2: PRODUCTS MANAGEMENT
+                 -------------------------------------------------------------- -->
+            <section class="view-pane" id="view-products">
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <div>
+                            <h3 class="panel-title"><i class="bi bi-boxes text-primary"></i> Products Inventory Catalog</h3>
+                            <p class="text-muted small mb-0">Manage products, pricing, stock levels, and category assignments</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadProducts()">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                            <button class="btn btn-sm btn-accent" onclick="openAddProductModal()">
+                                <i class="bi bi-plus-circle me-1"></i> Add New Product
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light border-bottom">
+                        <div class="row g-2">
+                            <div class="col-md-5">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="productSearchInput" placeholder="Search by Product Name or SKU...">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select form-select-sm" id="productFilterCategory">
+                                    <option value="">All Categories</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select form-select-sm" id="productFilterStatus">
+                                    <option value="ALL">All Statuses</option>
+                                    <option value="ACTIVE" selected>Active Only</option>
+                                    <option value="INACTIVE">Inactive Only</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Product Details</th>
+                                    <th>Category</th>
+                                    <th>Supplier</th>
+                                    <th>Cost</th>
+                                    <th>Price</th>
+                                    <th>Available Stock</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productsTableBody">
+                                <tr><td colspan="9" class="text-center py-4 text-muted">Loading products...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- --------------------------------------------------------------
+                 VIEW 3: STOCK IN (RECEIVING)
+                 -------------------------------------------------------------- -->
+            <section class="view-pane" id="view-stock-in">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <div class="panel-card">
+                            <div class="panel-header">
+                                <div>
+                                    <h3 class="panel-title"><i class="bi bi-box-arrow-in-down text-primary"></i> Stock In — Inventory Receiving</h3>
+                                    <p class="text-muted small mb-0">Record incoming stock procurement. Automatically calls PL/SQL procedure <code>INVENTORY_PKG.STOCK_IN</code></p>
+                                </div>
+                            </div>
+                            <div class="panel-body">
+                                <form id="stockInForm">
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label fw-bold">Select Product <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="stockInProductSelect" required>
+                                                <option value="">Select Target Product...</option>
+                                            </select>
+                                            <div class="form-text text-primary" id="stockInCurrentStockDisplay">--</div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Supplier</label>
+                                            <select class="form-select" id="stockInSupplierSelect">
+                                                <option value="">Select Supplier (Optional)...</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Quantity Received <span class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="stockInQuantityInput" min="1" placeholder="e.g. 50" required>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Purchase Unit Price ($)</label>
+                                            <input type="number" step="0.01" min="0" class="form-control" id="stockInPriceInput" placeholder="e.g. 45.00">
+                                            <div class="form-text">Updates product purchase cost if provided</div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Purchase Ref / PO Number</label>
+                                            <input type="text" class="form-control" id="stockInRefInput" placeholder="e.g. PO-2026-0042">
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Receiving Date</label>
+                                            <input type="date" class="form-control" id="stockInDateInput">
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Remarks / Shipment Notes</label>
+                                            <input type="text" class="form-control" id="stockInRemarksInput" placeholder="e.g. Bulk semester restock consignment">
+                                        </div>
+
+                                        <div class="col-12 pt-3">
+                                            <div class="alert alert-info d-flex align-items-center small py-2 mb-3">
+                                                <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                                                <div>
+                                                    <strong>Database Transaction Guarantee:</strong> Stock-in executes atomically inside Oracle DB. Updates product quantity and records a permanent movement entry in the same transaction.
+                                                </div>
+                                            </div>
+                                            <button type="submit" class="btn btn-accent btn-lg w-100">
+                                                <i class="bi bi-check2-circle me-1"></i> Confirm & Receive Stock
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- --------------------------------------------------------------
+                 VIEW 4: STOCK OUT (ISSUE / SALES)
+                 -------------------------------------------------------------- -->
+            <section class="view-pane" id="view-stock-out">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <div class="panel-card">
+                            <div class="panel-header">
+                                <div>
+                                    <h3 class="panel-title"><i class="bi bi-box-arrow-up-right text-primary"></i> Stock Out — Issue / Sales Dispatch</h3>
+                                    <p class="text-muted small mb-0">Record outgoing shipments or sales. Protected by Oracle pessimistic row lock (<code>SELECT FOR UPDATE</code>) to prevent negative balances</p>
+                                </div>
+                            </div>
+                            <div class="panel-body">
+                                <form id="stockOutForm">
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label fw-bold">Select Product <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="stockOutProductSelect" required>
+                                                <option value="">Select Target Product...</option>
+                                            </select>
+                                            <div class="form-text text-primary" id="stockOutCurrentStockDisplay">--</div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Quantity Issued / Sold <span class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="stockOutQuantityInput" min="1" placeholder="e.g. 5" required>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Sales Order / Dispatch Ref #</label>
+                                            <input type="text" class="form-control" id="stockOutRefInput" placeholder="e.g. SO-2026-901">
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Date of Issue</label>
+                                            <input type="date" class="form-control" id="stockOutDateInput">
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Remarks / Destination</label>
+                                            <input type="text" class="form-control" id="stockOutRemarksInput" placeholder="e.g. Dispatched to Computer Lab 4">
+                                        </div>
+
+                                        <div class="col-12 pt-3">
+                                            <div class="alert alert-warning d-flex align-items-center small py-2 mb-3">
+                                                <i class="bi bi-shield-lock-fill me-2 fs-5"></i>
+                                                <div>
+                                                    <strong>Concurrency Protection:</strong> PL/SQL procedure <code>INVENTORY_PKG.STOCK_OUT</code> validates stock availability against the locked row. If requested quantity exceeds stock, the operation is immediately rejected.
+                                                </div>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary-navy btn-lg w-100">
+                                                <i class="bi bi-box-arrow-up-right me-1"></i> Confirm & Issue Stock
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- --------------------------------------------------------------
+                 VIEW 5: TRANSACTION HISTORY
+                 -------------------------------------------------------------- -->
+            <section class="view-pane" id="view-movements">
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <div>
+                            <h3 class="panel-title"><i class="bi bi-clock-history text-primary"></i> Inventory Transaction Movement History</h3>
+                            <p class="text-muted small mb-0">Immutable audit log enforced by database trigger <code>TRG_PREVENT_HISTORY_MUTATION</code></p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadMovements()">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh Log
+                        </button>
+                    </div>
+
+                    <div class="p-3 bg-light border-bottom">
+                        <div class="row g-2">
+                            <div class="col-md-8">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="movementsSearchInput" placeholder="Search by Product Name, SKU, or Reference #...">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select form-select-sm" id="movementsFilterType">
+                                    <option value="ALL">All Movement Types</option>
+                                    <option value="STOCK_IN">Stock In Only (Receiving)</option>
+                                    <option value="STOCK_OUT">Stock Out Only (Issues)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Product Details</th>
+                                    <th>Movement Type</th>
+                                    <th>Quantity</th>
+                                    <th>Stock Balance Transition</th>
+                                    <th>Reference #</th>
+                                    <th>Remarks</th>
+                                    <th>Recorded Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movementsTableBody">
+                                <tr><td colspan="8" class="text-center py-4 text-muted">Loading movement logs...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- --------------------------------------------------------------
+                 VIEW 6: LOW-STOCK ALERTS
+                 -------------------------------------------------------------- -->
+            <section class="view-pane" id="view-low-stock">
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <div>
+                            <h3 class="panel-title text-warning"><i class="bi bi-exclamation-triangle-fill"></i> Low-Stock & Replenishment Alerts</h3>
+                            <p class="text-muted small mb-0">Identified via PL/SQL procedure <code>INVENTORY_PKG.GET_LOW_STOCK</code> cursor (Current Qty &le; Min Level)</p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadLowStockAlerts()">
+                            <i class="bi bi-arrow-clockwise"></i> Re-check Alerts
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Product Name & SKU</th>
+                                    <th>Category</th>
+                                    <th>Assigned Supplier</th>
+                                    <th>Stock Status</th>
+                                    <th>Current vs Minimum Stock</th>
+                                    <th class="text-end">Quick Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lowStockTableBody">
+                                <tr><td colspan="7" class="text-center py-4 text-muted">Checking inventory levels...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- --------------------------------------------------------------
+                 VIEW 7: SUPPLIERS DIRECTORY
+                 -------------------------------------------------------------- -->
+            <section class="view-pane" id="view-suppliers">
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <div>
+                            <h3 class="panel-title"><i class="bi bi-truck text-primary"></i> Suppliers Directory</h3>
+                            <p class="text-muted small mb-0">Manage authorized suppliers and view product associations</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadSuppliers()">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                            <button class="btn btn-sm btn-accent" onclick="openAddSupplierModal()">
+                                <i class="bi bi-plus-circle me-1"></i> Add Supplier
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Supplier Name</th>
+                                    <th>Phone</th>
+                                    <th>Email</th>
+                                    <th>Address</th>
+                                    <th>Catalog Linkage</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="suppliersTableBody">
+                                <tr><td colspan="7" class="text-center py-4 text-muted">Loading suppliers...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<!-- ==========================================================================
+     MODALS & DIALOGS
+     ========================================================================== -->
+
+<!-- Modal: Add / Edit Product -->
+<div class="modal fade" id="productFormModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="productFormModalTitle">Product Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="productForm">
+                <div class="modal-body">
+                    <input type="hidden" id="productIdInput">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">SKU (Unique Code) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="productSkuInput" placeholder="e.g. KB-RGB-99" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Product Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="productNameInput" placeholder="e.g. Wireless Ergonomic Keyboard" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" id="productCategorySelect" required>
+                                <option value="">Select Category...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Supplier</label>
+                            <select class="form-select" id="productSupplierSelect">
+                                <option value="">Select Supplier (Optional)...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Purchase Price ($) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="productPurchasePriceInput" placeholder="0.00" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Selling Price ($) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="productSellingPriceInput" placeholder="0.00" required>
+                        </div>
+                        <div class="col-md-6" id="productInitialQtyContainer">
+                            <label class="form-label fw-bold">Initial Stock Quantity</label>
+                            <input type="number" min="0" class="form-control" id="productInitialQtyInput" value="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Minimum Stock Level <span class="text-danger">*</span></label>
+                            <input type="number" min="0" class="form-control" id="productMinStockInput" value="5" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Status</label>
+                            <select class="form-select" id="productStatusSelect">
+                                <option value="ACTIVE" selected>ACTIVE</option>
+                                <option value="INACTIVE">INACTIVE</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-accent">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: View Product Details -->
+<div class="modal fade" id="productDetailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-info-circle me-1 text-primary"></i> Product Specification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered mb-0">
+                    <tbody>
+                        <tr><th class="bg-light" style="width: 40%;">Product Name</th><td id="detailProductName">--</td></tr>
+                        <tr><th class="bg-light">SKU</th><td class="font-mono" id="detailSku">--</td></tr>
+                        <tr><th class="bg-light">Category</th><td id="detailCategory">--</td></tr>
+                        <tr><th class="bg-light">Supplier</th><td id="detailSupplier">--</td></tr>
+                        <tr><th class="bg-light">Purchase Price</th><td id="detailPurchasePrice">--</td></tr>
+                        <tr><th class="bg-light">Selling Price</th><td id="detailSellingPrice">--</td></tr>
+                        <tr><th class="bg-light">Current Stock</th><td class="fw-bold fs-6" id="detailQuantity">--</td></tr>
+                        <tr><th class="bg-light">Min Stock Level</th><td id="detailMinStock">--</td></tr>
+                        <tr><th class="bg-light">Status</th><td id="detailStatus">--</td></tr>
+                        <tr><th class="bg-light">Created At</th><td class="small text-muted" id="detailCreatedAt">--</td></tr>
+                        <tr><th class="bg-light">Last Updated</th><td class="small text-muted" id="detailUpdatedAt">--</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary-navy" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add / Edit Supplier -->
+<div class="modal fade" id="supplierModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="supplierModalTitle">Supplier Information</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="supplierForm">
+                <div class="modal-body">
+                    <input type="hidden" id="supplierIdInput">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Supplier Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="supplierNameInput" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Phone Number</label>
+                        <input type="text" class="form-control" id="supplierPhoneInput" placeholder="+1-555-0100">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email Address</label>
+                        <input type="email" class="form-control" id="supplierEmailInput" placeholder="orders@supplier.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Physical Address</label>
+                        <textarea class="form-control" id="supplierAddressInput" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-accent">Save Supplier</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Category -->
+<div class="modal fade" id="categoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Product Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="categoryForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Category Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="categoryNameInput" placeholder="e.g. Smart Devices" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Description</label>
+                        <textarea class="form-control" id="categoryDescInput" rows="2" placeholder="Brief category description..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-accent">Create Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notifications Container -->
+<div class="toast-container">
+    <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i id="toastIcon" class="bi bi-bell me-2"></i>
+            <strong class="me-auto" id="toastHeaderTitle">Notification</strong>
+            <small class="text-muted">just now</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toastBodyText">
+            Action completed successfully.
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
